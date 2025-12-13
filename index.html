@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mess Connect | Smart Food Feedback</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* --- VARIABLES & RESET --- */
+        :root {
+            --primary: #FF6B6B;       /* Food/Appetite Red */
+            --secondary: #4ECDC4;     /* Fresh Teal */
+            --dark: #2D3436;
+            --light: #F7FFF7;
+            --accent: #FFE66D;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        body { background-color: var(--dark); color: var(--light); overflow-x: hidden; }
+        
+        /* Utility to hide content initially for signup */
+        body.locked { overflow: hidden; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* --- SIGNUP OVERLAY --- */
+        .signup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a1a, #2D3436);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .signup-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            padding: 3rem;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .signup-box h2 { margin-bottom: 1.5rem; color: var(--secondary); }
+        
+        .input-group { margin-bottom: 1.5rem; text-align: left; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa; }
+        .input-group input {
+            width: 100%; padding: 10px; border-radius: 10px; border: none; background: rgba(255,255,255,0.1);
+            color: white; outline: none; transition: 0.3s;
+        }
+        .input-group input:focus { background: rgba(255,255,255,0.2); box-shadow: 0 0 10px var(--secondary); }
+
+        .btn-signup {
+            width: 100%; padding: 12px; background: var(--primary); color: white; border: none;
+            border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.1rem;
+            transition: 0.3s;
+        }
+        .btn-signup:hover { background: #ff5252; transform: scale(1.05); }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 2rem;
+        }
+
+        .hero-blobs div {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            z-index: 0;
+        }
+
+        .blob-1 { top: -10%; left: -10%; width: 500px; height: 500px; background: var(--primary); animation: float 6s infinite ease-in-out; }
+        .blob-2 { bottom: -10%; right: -10%; width: 400px; height: 400px; background: var(--secondary); animation: float 8s infinite ease-in-out reverse; }
+
+        .hero-content {
+            z-index: 10;
+            text-align: center;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 30px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+        }
+
+        .btn-cta {
+            padding: 1rem 3rem; font-size: 1.2rem; font-weight: bold; background: var(--secondary);
+            color: #2D3436; border: none; border-radius: 50px; cursor: pointer; transition: all 0.3s; margin-top: 2rem;
+        }
+        .btn-cta:hover { transform: scale(1.05); background: white; }
+
+        /* --- INTERACTIVE DEMO --- */
+        .demo-section { padding: 5rem 2rem; background: #1e1e1e; }
+        .section-title { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; color: var(--secondary); }
+
+        .app-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 3rem; max-width: 1200px; margin: 0 auto;
+        }
+
+        /* LIVE FEEDBACK WALL (New Feature) */
+        .feedback-wall {
+            background: #252525; padding: 2rem; border-radius: 20px; border: 1px solid #333; height: 600px; display: flex; flex-direction: column;
+        }
+
+        .chat-display {
+            flex: 1; overflow-y: auto; margin-bottom: 1rem; padding-right: 10px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .chat-bubble {
+            background: #333; padding: 10px 15px; border-radius: 15px; font-size: 0.9rem; position: relative; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .chat-bubble.anon { border-left: 3px solid var(--secondary); }
+        .chat-bubble.named { border-left: 3px solid var(--primary); }
+        .chat-bubble small { display: block; font-size: 0.7rem; opacity: 0.6; margin-bottom: 3px; }
+
+        .chat-input-area {
+            background: #1a1a1a; padding: 1rem; border-radius: 15px; display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .chat-input {
+            width: 100%; background: transparent; border: none; color: white; outline: none; padding: 5px; font-size: 1rem;
+        }
+
+        .chat-controls { display: flex; justify-content: space-between; align-items: center; }
+        
+        .send-btn {
+            background: var(--secondary); color: var(--dark); border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer;
+        }
+
+        /* --- IMPACT STATS --- */
+        .stats-section { padding: 5rem 2rem; background: linear-gradient(to right, #2D3436, #000); text-align: center; }
+        .stat-number { font-size: 3.5rem; font-weight: bold; color: var(--accent); display: block; }
+
+        /* --- TEAM SECTION (MOVED TO BOTTOM) --- */
+        .team-section { padding: 4rem 2rem; background: var(--dark); text-align: center; border-top: 1px solid #333; }
+        .team-grid {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; margin-top: 2rem;
+        }
+        .team-card {
+            background: rgba(255,255,255,0.05); padding: 1.5rem 2rem; border-radius: 15px; border: 1px solid #333; min-width: 200px;
+        }
+        .team-card h4 { color: var(--primary); margin-bottom: 0.5rem; }
+        .team-card span { font-size: 0.8rem; opacity: 0.7; }
+
+        /* --- FOOTER --- */
+        footer { padding: 2rem; text-align: center; opacity: 0.6; font-size: 0.9rem; background: black; }
+
+    </style>
+</head>
+<body class="locked">
+
+    <div class="signup-overlay" id="signupOverlay">
+        <div class="signup-box">
+            <h2><i class="fas fa-utensils"></i> Mess Connect</h2>
+            <p style="margin-bottom: 1.5rem; opacity: 0.8;">Register to vote for the Sunday Special!</p>
+            
+            <div class="input-group">
+                <label>Student Name</label>
+                <input type="text" id="userName" placeholder="e.g. Rahul Sharma">
+            </div>
+            <div class="input-group">
+                <label>Roll Number (Student ID)</label>
+                <input type="text" placeholder="e.g. 202501..." id="rollNo">
+            </div>
+            
+            <button class="btn-signup" onclick="completeSignup()">Join Mess Connect</button>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="hero-blobs">
+            <div class="blob-1"></div>
+            <div class="blob-2"></div>
+        </div>
+        <div class="hero-content">
+            <h1>MESS CONNECT</h1>
+            <p style="font-size: 1.5rem; margin-bottom: 1rem; opacity: 0.9;">Stop the "Monday Morning Crisis".</p>
+            <p><strong>Impact:</strong> 15% Less Waste | 24h Complaint Resolution</p>
+            <button class="btn-cta" onclick="document.querySelector('.demo-section').scrollIntoView({behavior: 'smooth'})">
+                Open App Dashboard
+            </button>
+        </div>
+    </section>
+
+    <section class="demo-section">
+        <h2 class="section-title">Interactive Dashboard</h2>
+        
+        <div class="app-grid">
+            
+            <div class="feedback-wall">
+                <h3 style="margin-bottom: 1rem; color: var(--secondary);"><i class="fas fa-comments"></i> Live Feedback Wall</h3>
+                <div class="chat-display" id="chatDisplay">
+                    <div class="chat-bubble named">
+                        <small>Pratyush Verma</small>
+                        The Paneer today was excellent!
+                    </div>
+                    <div class="chat-bubble anon">
+                        <small>Anonymous Student</small>
+                        Rice is a bit undercooked, please check.
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="feedbackInput" placeholder="Type your feedback here...">
+                    <div class="chat-controls">
+                        <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="anonToggle"> Post Anonymously
+                        </label>
+                        <button class="send-btn" onclick="postFeedback()">Send <i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feedback-wall" style="height: auto; min-height: 400px; justify-content: center;">
+                <h3 style="margin-bottom: 1rem; color: var(--primary); text-align: center;"><i class="fas fa-poll"></i> Sunday Special Vote</h3>
+                <p style="text-align: center; margin-bottom: 2rem; opacity: 0.7;">Democratic Choice. Majority Wins.</p>
+                
+                <div style="margin-bottom: 1.5rem; cursor: pointer;" onclick="vote(0)">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <strong>Masala Dosa</strong>
+                        <span id="v-0">34%</span>
+                    </div>
+                    <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div id="bar-0" style="width: 34%; background: var(--secondary); height: 100%; transition: width 0.5s;"></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem; cursor: pointer;" onclick="vote(1)">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <strong>Chole Bhature</strong>
+                        <span id="v-1">45%</span>
+                    </div>
+                    <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div id="bar-1" style="width: 45%; background: var(--primary); height: 100%; transition: width 0.5s;"></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem; cursor: pointer;" onclick="vote(2)">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <strong>Veg Biryani</strong>
+                        <span id="v-2">21%</span>
+                    </div>
+                    <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div id="bar-2" style="width: 21%; background: #FFE66D; height: 100%; transition: width 0.5s;"></div>
+                    </div>
+                </div>
+                
+                <p id="voteStatus" style="text-align: center; font-size: 0.8rem; color: #aaa; margin-top: 1rem;">Click a dish to cast your vote</p>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <h2 style="color:white; margin-bottom: 2rem;">Real Impact</h2>
+        <div style="display: flex; justify-content: center; gap: 4rem; flex-wrap: wrap;">
+            <div>
+                <span class="stat-number">15%</span>
+                <span>Less Food Waste</span>
+            </div>
+            <div>
+                <span class="stat-number">4.1/5</span>
+                <span>Satisfaction Score</span>
+            </div>
+            <div>
+                <span class="stat-number">24h</span>
+                <span>Resolution Time</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="team-section">
+        <h2 style="color: var(--light);">Developed by Team Nexora (Group 7)</h2>
+        <div class="team-grid">
+            <div class="team-card">
+                <h4>Shivam Kumar</h4>
+                <span>Roll No: 20250100400300</span>
+            </div>
+            <div class="team-card">
+                <h4>Shivam Nayer</h4>
+                <span>Roll No: 202501100400301</span>
+            </div>
+            <div class="team-card">
+                <h4>Sarthak Verma</h4>
+                <span>Roll No: 202501100400285</span>
+            </div>
+            <div class="team-card">
+                <h4>Saubhagya Jaiswal</h4>
+                <span>Roll No: 202501100400289</span>
+            </div>
+            <div class="team-card">
+                <h4>Pranav Shukla</h4>
+                <span>Roll No: 202501100400243</span>
+            </div>
+            <div class="team-card">
+                <h4>Pratyush Verma</h4>
+                <span>Roll No: 202501100400248</span>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Mess Connect | Design Thinking Project (IT103L)</p>
+        <p>Submitted to: Prof. Anuraag Raj Narayan</p>
+    </footer>
+
+    <script>
+        // 1. SIGNUP LOGIC
+        let currentUser = "Guest";
+
+        function completeSignup() {
+            const nameInput = document.getElementById('userName').value;
+            const rollInput = document.getElementById('rollNo').value;
+
+            if(nameInput && rollInput) {
+                currentUser = nameInput;
+                const overlay = document.getElementById('signupOverlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    document.body.classList.remove('locked');
+                }, 800);
+            } else {
+                alert("Please enter your Name and Roll Number to verify you are a Hostel Resident.");
+            }
+        }
+
+        // 2. FEEDBACK SYSTEM LOGIC
+        function postFeedback() {
+            const input = document.getElementById('feedbackInput');
+            const display = document.getElementById('chatDisplay');
+            const isAnon = document.getElementById('anonToggle').checked;
+            const text = input.value;
+
+            if(text.trim() === "") return;
+
+            // Create Bubble
+            const bubble = document.createElement('div');
+            bubble.className = isAnon ? 'chat-bubble anon' : 'chat-bubble named';
+            
+            const nameLabel = document.createElement('small');
+            nameLabel.innerText = isAnon ? "Anonymous Student" : currentUser;
+            
+            const msgNode = document.createTextNode(text);
+
+            bubble.appendChild(nameLabel);
+            bubble.appendChild(msgNode);
+
+            // Append and Scroll
+            display.appendChild(bubble);
+            display.scrollTop = display.scrollHeight;
+            
+            // Clear Input
+            input.value = "";
+        }
+
+        // Allow 'Enter' key to send
+        document.getElementById('feedbackInput').addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                postFeedback();
+            }
+        });
+
+        // 3. VOTING LOGIC
+        let votes = [34, 45, 21];
+        
+        function vote(index) {
+            votes[index] += 1;
+            
+            // Normalize to %
+            let total = votes.reduce((a, b) => a + b, 0);
+            let percents = votes.map(v => Math.round((v / total) * 100));
+
+            // Update UI
+            percents.forEach((p, i) => {
+                document.getElementById(`v-${i}`).innerText = p + "%";
+                document.getElementById(`bar-${i}`).style.width = p + "%";
+            });
+
+            const status = document.getElementById('voteStatus');
+            status.innerText = "Vote recorded! Data sent to Mess Committee.";
+            status.style.color = "#4ECDC4";
+        }
+    </script>
+</body>
+</html>
